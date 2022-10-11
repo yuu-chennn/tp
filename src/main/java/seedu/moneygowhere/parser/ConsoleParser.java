@@ -8,27 +8,23 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.text.StringTokenizer;
 import org.apache.commons.text.matcher.StringMatcherFactory;
-import seedu.moneygowhere.commands.ConsoleCommand;
-import seedu.moneygowhere.commands.ConsoleCommandAddExpense;
-import seedu.moneygowhere.commands.ConsoleCommandBye;
-import seedu.moneygowhere.commands.ConsoleCommandDeleteExpense;
-import seedu.moneygowhere.commands.ConsoleCommandEditExpense;
-import seedu.moneygowhere.commands.ConsoleCommandSortExpense;
-import seedu.moneygowhere.commands.ConsoleCommandViewExpense;
+import seedu.moneygowhere.commands.*;
 import seedu.moneygowhere.common.Configurations;
 import seedu.moneygowhere.common.Messages;
-import seedu.moneygowhere.exceptions.ConsoleParserCommandAddExpenseInvalidException;
-import seedu.moneygowhere.exceptions.ConsoleParserCommandDeleteExpenseInvalidException;
-import seedu.moneygowhere.exceptions.ConsoleParserCommandEditExpenseInvalidException;
-import seedu.moneygowhere.exceptions.ConsoleParserCommandNotFoundException;
-import seedu.moneygowhere.exceptions.ConsoleParserCommandSortExpenseInvalidTypeException;
-import seedu.moneygowhere.exceptions.ConsoleParserCommandViewExpenseInvalidException;
+import seedu.moneygowhere.data.category.Category;
+import seedu.moneygowhere.data.category.CategoryManager;
+import seedu.moneygowhere.data.expense.Expense;
+import seedu.moneygowhere.exceptions.*;
 
+import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 
 /**
  * Provide functions to parse inputs read from standard input.
@@ -44,6 +40,8 @@ public class ConsoleParser {
     public static final String CONSOLE_COMMAND_ADD_EXPENSE_ARGUMENT_CATEGORY = "category";
     public static final String CONSOLE_COMMAND_VIEW_EXPENSE = "view-expense";
     public static final String CONSOLE_COMMAND_VIEW_EXPENSE_ARGUMENT_EXPENSE_INDEX = "expense-index";
+    public static final String CONSOLE_COMMAND_VIEW_CATEGORY = "view-category";
+    public static final String CONSOLE_COMMAND_VIEW_CATEGORY_ARGUMENT_CATEGORY = "category";
     public static final String CONSOLE_COMMAND_DELETE_EXPENSE = "delete-expense";
     public static final String CONSOLE_COMMAND_DELETE_EXPENSE_ARGUMENT_EXPENSE_INDEX =
             CONSOLE_COMMAND_VIEW_EXPENSE_ARGUMENT_EXPENSE_INDEX;
@@ -68,6 +66,7 @@ public class ConsoleParser {
     public static final String CONSOLE_COMMAND_SORT_EXPENSE_TYPE_DATE = "date";
     public static final String CONSOLE_COMMAND_SORT_EXPENSE_ORDER_ASCENDING = "ascending";
     public static final String CONSOLE_COMMAND_SORT_EXPENSE_ORDER_DESCENDING = "descending";
+    public static final String CONSOLE_COMMAND_VIEW_EXPENSE_ARGUMENT_EXPENSE_CATEGORY = "expense-category";
 
     private static String[] tokenizeCommandArguments(String arguments) {
         StringTokenizer stringTokenizer = new StringTokenizer(arguments);
@@ -177,12 +176,20 @@ public class ConsoleParser {
                     true,
                     "expense index"
             );
+            Option optionExpenseCategory = new Option(
+                    "c",
+                    CONSOLE_COMMAND_VIEW_EXPENSE_ARGUMENT_EXPENSE_CATEGORY,
+                    true,
+                    "expense category"
+            );
             Options options = new Options();
             options.addOption(optionExpenseIndex);
+            options.addOption(optionExpenseCategory);
             CommandLineParser commandLineParser = new DefaultParser();
             CommandLine commandLine = commandLineParser.parse(options, argumentsArr);
 
             String expenseIndexStr = commandLine.getOptionValue("expense-index");
+            String expenseCategory = commandLine.getOptionValue("expense-category");
 
             int expenseIndex;
             if (expenseIndexStr == null) {
@@ -191,7 +198,7 @@ public class ConsoleParser {
                 expenseIndex = Integer.parseInt(expenseIndexStr);
             }
 
-            return new ConsoleCommandViewExpense(expenseIndex);
+            return new ConsoleCommandViewExpense(expenseIndex, expenseCategory);
         } catch (ParseException
                  | NumberFormatException exception) {
             throw new ConsoleParserCommandViewExpenseInvalidException(
@@ -200,6 +207,50 @@ public class ConsoleParser {
             );
         }
     }
+
+    /*
+    private static ConsoleCommandViewCategory parseCommandViewCategory(String arguments) throws
+            ConsoleParserCommandViewCategoryInvalidException {
+        try {
+            String[] argumentsArr = tokenizeCommandArguments(arguments);
+
+            Option optionCategory = new Option(
+                    "c",
+                    CONSOLE_COMMAND_VIEW_CATEGORY_ARGUMENT_CATEGORY,
+                    true,
+                    "category"
+            );
+            Options options = new Options();
+            options.addOption(optionCategory);
+            CommandLineParser commandLineParser = new DefaultParser();
+            CommandLine commandLine = commandLineParser.parse(options, argumentsArr);
+
+            String categoryStr = commandLine.getOptionValue("category");
+
+            return new ConsoleCommandViewCategory(categoryStr);
+
+            /*
+            ArrayList<Category> categories = CategoryManager.getCategories();
+            ArrayList<Expense> expenses = new ArrayList<>();
+            Category targetCategory = new Category("", expenses);
+            for (Category currCategory : categories) {
+                if (currCategory.categoryName.contains(categoryStr)) {
+                    currCategory.categoryName = categoryStr;
+                    targetCategory = currCategory;
+                    break;
+                } else {
+                    targetCategory = null;
+                }
+            }
+        } catch (ParseException
+                 | NumberFormatException exception) {
+            throw new ConsoleParserCommandViewCategoryInvalidException(
+                    Messages.CONSOLE_ERROR_COMMAND_VIEW_CATEGORY_INVALID,
+                    exception
+            );
+        }
+    }
+    */
 
     private static ConsoleCommandDeleteExpense parseCommandDeleteExpense(String arguments) throws
             ConsoleParserCommandDeleteExpenseInvalidException {

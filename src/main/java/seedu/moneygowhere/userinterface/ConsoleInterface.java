@@ -1,22 +1,13 @@
 package seedu.moneygowhere.userinterface;
 
-import seedu.moneygowhere.commands.ConsoleCommand;
-import seedu.moneygowhere.commands.ConsoleCommandAddExpense;
-import seedu.moneygowhere.commands.ConsoleCommandBye;
-import seedu.moneygowhere.commands.ConsoleCommandDeleteExpense;
-import seedu.moneygowhere.commands.ConsoleCommandEditExpense;
-import seedu.moneygowhere.commands.ConsoleCommandSortExpense;
-import seedu.moneygowhere.commands.ConsoleCommandViewExpense;
+import seedu.moneygowhere.commands.*;
 import seedu.moneygowhere.common.Configurations;
 import seedu.moneygowhere.common.Messages;
+import seedu.moneygowhere.data.category.Category;
+import seedu.moneygowhere.data.category.CategoryManager;
 import seedu.moneygowhere.data.expense.Expense;
 import seedu.moneygowhere.data.expense.ExpenseManager;
-import seedu.moneygowhere.exceptions.ConsoleParserCommandAddExpenseInvalidException;
-import seedu.moneygowhere.exceptions.ConsoleParserCommandDeleteExpenseInvalidException;
-import seedu.moneygowhere.exceptions.ConsoleParserCommandEditExpenseInvalidException;
-import seedu.moneygowhere.exceptions.ConsoleParserCommandNotFoundException;
-import seedu.moneygowhere.exceptions.ConsoleParserCommandSortExpenseInvalidTypeException;
-import seedu.moneygowhere.exceptions.ConsoleParserCommandViewExpenseInvalidException;
+import seedu.moneygowhere.exceptions.*;
 import seedu.moneygowhere.parser.ConsoleParser;
 
 import static seedu.moneygowhere.storage.LocalStorage.loadFromFile;
@@ -27,6 +18,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.Scanner;
 
 
@@ -38,6 +30,7 @@ import java.util.Scanner;
 public class ConsoleInterface {
     private Scanner scanner;
     private ExpenseManager expenseManager;
+    private CategoryManager categoryManager;
 
     /**
      * Initializes the console interface.
@@ -45,6 +38,7 @@ public class ConsoleInterface {
     public ConsoleInterface() {
         scanner = new Scanner(System.in);
         expenseManager = new ExpenseManager();
+        categoryManager = new CategoryManager();
     }
 
     /**
@@ -131,6 +125,11 @@ public class ConsoleInterface {
                 consoleCommandAddExpense.getCategory());
         expenseManager.addExpense(expense);
 
+        String categoryName = consoleCommandAddExpense.getCategory();
+        if (!categoryManager.hasCategory(categoryName)) {
+            categoryManager.addCategory(categoryName);
+        }
+
         DateTimeFormatter dateTimeFormat = DateTimeFormatter.ofPattern(
                 Configurations.CONSOLE_INTERFACE_DATE_TIME_OUTPUT_FORMAT
         );
@@ -143,8 +142,6 @@ public class ConsoleInterface {
         printInformationalMessage(expenseStr);
 
         printInformationalMessage(Messages.CONSOLE_MESSAGE_COMMAND_ADD_EXPENSE_SUCCESS);
-
-        saveToFile(expenseManager.getExpenses());
     }
 
     private void viewExpense() {
@@ -183,25 +180,80 @@ public class ConsoleInterface {
         System.out.println(expenseStr);
     }
 
+    private void viewExpenseByExpenseCategory(String expenseCategory) {
+        ArrayList<Expense> expenses = expenseManager.getExpensesByCategory(expenseCategory);
+
+        for (int index = 0; index < expenses.size(); index++) {
+            Expense expense = expenses.get(index);
+
+            DateTimeFormatter dateTimeFormat = DateTimeFormatter.ofPattern(
+                    Configurations.CONSOLE_INTERFACE_DATE_TIME_OUTPUT_FORMAT
+            );
+            String expenseStr = "";
+            expenseStr += "---- EXPENSE INDEX " + index + " ----\n";
+            expenseStr += "Name          : " + expense.getName() + "\n";
+            expenseStr += "Date and Time : " + expense.getDateTime().format(dateTimeFormat) + "\n";
+            expenseStr += "Description   : " + expense.getDescription() + "\n";
+            expenseStr += "Amount        : " + expense.getAmount() + "\n";
+            expenseStr += "Category      : " + expense.getCategory();
+            printInformationalMessage(expenseStr);
+        }
+    }
+
     private void runCommandViewExpense(ConsoleCommandViewExpense consoleCommandViewExpense) {
         int expenseIndex = consoleCommandViewExpense.getExpenseIndex();
+        String expenseCategory = consoleCommandViewExpense.getExpenseCategory();
 
         if (expenseIndex >= 0) {
             viewExpenseByExpenseIndex(expenseIndex);
+        } else if (expenseCategory != null && !expenseCategory.equals("")) {
+            viewExpenseByExpenseCategory(expenseCategory);
         } else {
             viewExpense();
         }
     }
+
+    /*
+    private void viewExpenseByCategory(String category) {
+        ArrayList<Category> categories = CategoryManager.getCategories();
+        ArrayList<Expense> expenses = Category.getExpenses(category);
+        for (int index = 0; index < expenses.size(); index++) {
+            Expense expense = expenses.get(index);
+
+            DateTimeFormatter dateTimeFormat = DateTimeFormatter.ofPattern(
+                    Configurations.CONSOLE_INTERFACE_DATE_TIME_OUTPUT_FORMAT
+            );
+            if (Objects.equals(expense.getCategory(), category)) {
+                String expenseStr = "";
+                expenseStr += "---- EXPENSE INDEX " + index + " ----\n";
+                expenseStr += "Name          : " + expense.getName() + "\n";
+                expenseStr += "Date and Time : " + expense.getDateTime().format(dateTimeFormat) + "\n";
+                expenseStr += "Description   : " + expense.getDescription() + "\n";
+                expenseStr += "Amount        : " + expense.getAmount() + "\n";
+                expenseStr += "Category      : " + expense.getCategory();
+                printInformationalMessage(expenseStr);
+            }
+        }
+    }
+     */
+
+    /*
+    private void runCommandViewCategory(ConsoleCommandViewCategory consoleCommandViewCategory) {
+        String category = consoleCommandViewCategory.getCategory();
+
+        viewExpenseByCategory(category.categoryName);
+    }
+
+     */
 
     private void runCommandDeleteExpense(ConsoleCommandDeleteExpense consoleCommandDeleteExpense) {
         int expenseIndex = consoleCommandDeleteExpense.getExpenseIndex();
         expenseManager.deleteExpense(expenseIndex);
 
         printInformationalMessage(Messages.CONSOLE_MESSAGE_COMMAND_DELETE_EXPENSE_SUCCESS);
-
-        saveToFile(expenseManager.getExpenses());
     }
 
+    /*
     private void runCommandEditExpense(ConsoleCommandEditExpense consoleCommandEditExpense) {
         int expenseIndex = consoleCommandEditExpense.getExpenseIndex();
 
@@ -231,6 +283,33 @@ public class ConsoleInterface {
         Expense newExpense = new Expense(name, dateTime, description, amount, category);
         expenseManager.editExpense(expenseIndex, newExpense);
 
+        ArrayList<Category> categories = CategoryManager.getCategories();
+        boolean found = false;
+        for (Category currCategory : categories) {
+            if (currCategory.categoryName.contains(oldExpense.getCategory())) {
+                Category.expenses.set(expenseIndex, newExpense);
+                found = true;
+                break;
+            }
+        } if (!found) { // category does not exist yet
+            for (Category currCategory : categories) {
+                for (Expense currExpense : Category.expenses) {
+                    if (Objects.equals(currExpense.getName(), oldExpense.getName())) {
+                        Category.expenses.remove(currExpense);
+                        ArrayList<Expense> expenses = new ArrayList<>();
+                        expenses.add(newExpense);
+                        Category newCategory = new Category(newExpense.getCategory(), expenses);
+                        CategoryManager.addCategory(newCategory);
+                    }
+                }
+
+            }
+            ArrayList<Expense> expenses = new ArrayList<>();
+            expenses.add(newExpense);
+            Category newCategory = new Category(newExpense.getCategory(), expenses);
+            CategoryManager.addCategory(newCategory);
+        }
+
         DateTimeFormatter dateTimeFormat = DateTimeFormatter.ofPattern(
                 Configurations.CONSOLE_INTERFACE_DATE_TIME_OUTPUT_FORMAT
         );
@@ -246,6 +325,7 @@ public class ConsoleInterface {
 
         saveToFile(expenseManager.getExpenses());
     }
+    */
 
     private void runCommandSortExpense(ConsoleCommandSortExpense commandSortExpense) {
         String type = commandSortExpense.getType();
@@ -301,7 +381,7 @@ public class ConsoleInterface {
             } else if (consoleCommand instanceof ConsoleCommandDeleteExpense) {
                 runCommandDeleteExpense((ConsoleCommandDeleteExpense) consoleCommand);
             } else if (consoleCommand instanceof ConsoleCommandEditExpense) {
-                runCommandEditExpense((ConsoleCommandEditExpense) consoleCommand);
+                //runCommandEditExpense((ConsoleCommandEditExpense) consoleCommand);
             } else if (consoleCommand instanceof ConsoleCommandSortExpense) {
                 runCommandSortExpense((ConsoleCommandSortExpense) consoleCommand);
             } else {
